@@ -47,7 +47,7 @@ export function Wardrobe({ initialTab }: { initialTab?: Tab }) {
       <ScreenHeader title="Wardrobe" sub="Equip what you own" onBack={app.back} right={<WalletPill amount={save.wallet.cash} onClick={() => app.go({ name: 'cash' })} />} />
       <DragRotate className="preview-drag" />
       <div className="sheet catalog-sheet">
-        <div className="tabs">
+        <div className="tabs wrap">
           {(['outfit', 'look', 'boards', 'presets', 'duplicates'] as Tab[]).map((t) => (
             <Chip key={t} active={tab === t} onClick={() => setTab(t)} testId={`tab-${t}`}>
               {t === 'duplicates' ? `Dupes${dupeTotal ? ` (${dupeTotal})` : ''}` : t[0]!.toUpperCase() + t.slice(1)}

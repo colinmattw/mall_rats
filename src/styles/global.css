@@ -781,8 +781,10 @@ input:focus-visible {
   display: none;
 }
 
-.chip-row.wrap {
+.chip-row.wrap,
+.tabs.wrap {
   flex-wrap: wrap;
+  overflow: visible;
 }
 
 .tabs .spacer {
