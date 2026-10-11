@@ -1,4 +1,5 @@
 import type { Rarity } from './catalog';
+import type { EnvId } from './environments';
 
 /**
  * Economy tuning. Values are starting assumptions and are documented (with the
@@ -18,6 +19,12 @@ export const ECONOMY = {
     legendary: [15000, 25000],
   } as Record<Rarity, [number, number]>,
   pickupValues: { cash: 1, stack: 5 },
+  /**
+   * Scales the length of authored coin lines per environment (jump arcs and
+   * cash stacks are left untouched). This is the main knob for run earnings
+   * and keeps each route's reward tradeoff intact.
+   */
+  coinDensity: { concourse: 0.6, foodcourt: 0.7, deptstore: 0.65, maintenance: 0.55, atrium: 0.6 } as Record<EnvId, number>,
   rewardedAd: { amount: 100, dailyCap: 10 },
   /** One-time reward for completing the tutorial: enough for a modest cosmetic. */
   tutorialReward: 600,
@@ -27,7 +34,7 @@ export const ECONOMY = {
     targetCashPerRun: [75, 150] as [number, number],
     typicalRunSeconds: [60, 90] as [number, number],
     /** Assumed share of placed Mall Cash a typical player actually collects. */
-    typicalCollectionRate: 0.6,
+    typicalCollectionRate: 0.55,
     /** Collected rewards are committed to the save at least this often (ticks). */
     commitIntervalTicks: 90,
   },

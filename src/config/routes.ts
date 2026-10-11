@@ -605,8 +605,12 @@ export interface TutorialStep {
   body: string;
   /** Action that completes the step. */
   expect: 'lane' | 'jump' | 'duck' | 'grind' | 'trick' | 'none';
-  /** Player must be in this lane for the step to begin counting (grind setup). */
   slowMotion: boolean;
+  /**
+   * If false, clearing the step's obstacle without a collision also completes
+   * it (the player may have reacted before the prompt appeared).
+   */
+  mustPerform?: boolean;
 }
 
 export const TUTORIAL_STEPS: TutorialStep[] = [
@@ -645,6 +649,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     body: 'Get in the middle lane. Roll onto the striped kicker, or land on the glowing rail, to grind automatically.',
     expect: 'grind',
     slowMotion: false,
+    mustPerform: true,
   },
   {
     id: 'trick',
@@ -654,6 +659,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     body: 'Jump, then swipe left or right while in the air (or Q / E) to flip the board. Air swipes never change your lane.',
     expect: 'trick',
     slowMotion: true,
+    mustPerform: true,
   },
   {
     id: 'security',

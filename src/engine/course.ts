@@ -177,6 +177,8 @@ export class Course {
       decorSeed?: number;
       junctionOptions?: [EnvId, EnvId, EnvId];
       exitTo?: EnvId | null;
+      /** Coin line length multiplier (economy tuning). Arcs and stacks are unaffected. */
+      coinScale?: number;
     },
   ): ChunkInstance {
     const s0 = this.end;
@@ -253,7 +255,8 @@ export class Course {
       if ((spec.d ?? 0) > opts.difficulty) continue;
       const lane = ml(spec.l);
       const gap = spec.gap ?? 2.5;
-      for (let i = 0; i < spec.n; i++) {
+      const scaled = spec.arc || spec.stack ? spec.n : Math.max(1, Math.round(spec.n * (opts.coinScale ?? 1)));
+      for (let i = 0; i < scaled; i++) {
         const p = this.pickupPool.pop() ?? this.allocPickup();
         p.id = nextId();
         p.kind = spec.stack ? 'stack' : 'cash';

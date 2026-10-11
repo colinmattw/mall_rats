@@ -1,7 +1,7 @@
 import { GAMEPLAY, SIM_DT, speedAtDistance, type GameplayConfig } from '../config/gameplay';
 import type { EnvId } from '../config/environments';
 import { ECONOMY } from '../config/economy';
-import { TUTORIAL_CHUNK, TUTORIAL_STEPS, type TutorialStep } from '../config/routes';
+import { TUTORIAL_CHUNK, TUTORIAL_STEPS, type ChunkTemplate, type TutorialStep } from '../config/routes';
 import { Course, lateralOverlap, overlapsObstacle, type ChunkInstance, type CourseObstacle, type CoursePickup, type PlayerBox } from './course';
 import { RouteGenerator } from './generator';
 import {
@@ -81,6 +81,10 @@ export interface RunOptions {
   tutorial?: boolean;
   cfg?: GameplayConfig;
   hooks?: Partial<RunHooks>;
+  /** Fixed chunk list instead of procedural generation (tests / fixtures). */
+  fixedCourse?: ChunkTemplate[];
+  /** Constant forward speed override (tests / fixtures). */
+  constantSpeed?: number;
 }
 
 /** Distance before a junction facade at which the door choice is locked in. */
@@ -113,6 +117,7 @@ export class RunSimulation {
   timeScale = 1;
   tutorialIndex = 0;
   tutorialActive: TutorialStep | null = null;
+  private tutorialHit = false;
   private pEvents: PlayerEvent[] = [];
   private box: PlayerBox = { x0: 0, x1: 0, s0: 0, s1: 0, y0: 0, y1: 0 };
   private prevBox: PlayerBox = { x0: 0, x1: 0, s0: 0, s1: 0, y0: 0, y1: 0 };
@@ -147,10 +152,11 @@ export class RunSimulation {
       ...opts.hooks,
     };
     this.course = new Course(this.cfg);
-    this.generator = new RouteGenerator(this.seed, this.cfg, { tutorial: this.tutorial });
+    this.generator = new RouteGenerator(this.seed, this.cfg, { tutorial: this.tutorial, fixed: opts.fixedCourse });
     this.generator.start(this.course);
     this.player = createPlayer(0, 1, this.cfg);
-    const speedFn = this.tutorial ? () => TUTORIAL_SPEED : (s: number) => speedAtDistance(s, this.cfg);
+    const fixedSpeed = opts.constantSpeed ?? (this.tutorial ? TUTORIAL_SPEED : null);
+    const speedFn = fixedSpeed !== null ? () => fixedSpeed : (s: number) => speedAtDistance(s, this.cfg);
     this.ctx = createStepContext(this.course.rails, speedFn, { buffering: true, cfg: this.cfg });
     this.player.speed = speedFn(0);
     this.scorer = new StyleScorer(this.cfg);
@@ -280,6 +286,7 @@ export class RunSimulation {
 
   private minorCollision(o: CourseObstacle | null, side: boolean): void {
     if (this.tutorial) {
+      this.tutorialHit = true;
       stumble(this.player, this.cfg);
       if (o) this.events.push({ type: 'minorHit', obstacle: o, side });
       return;
@@ -314,6 +321,7 @@ export class RunSimulation {
       if (sev === 'breakable') {
         this.knock(o);
         this.counters.smashes++;
+        if (this.tutorial) this.tutorialHit = true;
         this.emitAwards(this.scorer.award('smash', `Smashed ${o.def.label}`, o.def.stylePoints ?? 100, { noCombo: true }));
         const lost = this.scorer.breakCombo();
         if (lost) this.events.push({ type: 'comboEnd', combo: lost, broken: true });
@@ -488,6 +496,7 @@ export class RunSimulation {
     }
     if (!this.tutorialActive && p.s >= step.at) {
       this.tutorialActive = step;
+      this.tutorialHit = false;
       this.timeScale = step.slowMotion ? 0.3 : 1;
       this.events.push({ type: 'tutorial', step, state: 'show' });
     }
@@ -508,14 +517,15 @@ export class RunSimulation {
           return false;
       }
     });
-    if (done || (step.expect === 'none' && p.s >= step.until)) {
+    const clearedCleanly = p.s >= step.until && !step.mustPerform && !this.tutorialHit;
+    if (done || clearedCleanly || (step.expect === 'none' && p.s >= step.until)) {
       this.events.push({ type: 'tutorial', step, state: 'done' });
       this.tutorialActive = null;
       this.tutorialIndex++;
       this.timeScale = 1;
       return;
     }
-    if (p.s >= step.until && step.expect !== 'none') this.tutorialRetry();
+    if (p.s >= step.until) this.tutorialRetry();
   }
 
   // ------------------------------------------------------------- summary

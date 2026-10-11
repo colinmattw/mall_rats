@@ -1,3 +1,4 @@
+import { ECONOMY } from '../config/economy';
 import { GAMEPLAY, LANE_COUNT, SIM_DT, difficultyAtDistance, settleTime, speedAtDistance, type GameplayConfig } from '../config/gameplay';
 import type { EnvId } from '../config/environments';
 import {
@@ -58,14 +59,17 @@ export class RouteGenerator {
   private bagPending = false;
   waitingJunction: ChunkInstance | null = null;
   readonly tutorial: boolean;
+  /** Fixed list of chunks (tests / fixtures): no procedural generation. */
+  private readonly fixed: ChunkTemplate[] | null;
 
   constructor(
     seed: string,
     private readonly cfg: GameplayConfig = GAMEPLAY,
-    opts: { tutorial?: boolean } = {},
+    opts: { tutorial?: boolean; fixed?: ChunkTemplate[] } = {},
   ) {
     this.rng = new Rng(`route:${seed}`);
     this.tutorial = !!opts.tutorial;
+    this.fixed = opts.fixed ?? null;
     this.nextJunctionIn = this.rollJunctionSpacing();
   }
 
@@ -84,12 +88,16 @@ export class RouteGenerator {
       this.add(course, TUTORIAL_CHUNK, { mirror: false, difficulty: 0 });
       return;
     }
+    if (this.fixed) {
+      for (const t of this.fixed) this.add(course, t, { mirror: false, difficulty: 1, bagSlot: t.bagSlots.length ? 0 : null });
+      return;
+    }
     this.add(course, START_CHUNK, { mirror: false, difficulty: 0 });
   }
 
   /** Generate until the course reaches `upTo` (or a junction awaits a decision). */
   fill(course: Course, upTo: number, hooks: GeneratorHooks): void {
-    if (this.tutorial) return;
+    if (this.tutorial || this.fixed) return;
     let guard = 0;
     while (course.end < upTo && !this.waitingJunction && guard++ < 32) {
       this.appendNext(course, hooks);
@@ -219,7 +227,8 @@ export class RouteGenerator {
     clearLength?: number,
     gapBefore = 0,
   ): ChunkInstance {
-    const chunk = course.addChunk(template, { ...opts, decorSeed: this.rng.nextU32() });
+    const coinScale = this.tutorial || this.fixed ? 1 : ECONOMY.coinDensity[template.env];
+    const chunk = course.addChunk(template, { ...opts, decorSeed: this.rng.nextU32(), coinScale });
     const tail = templateTailClear(template, opts.difficulty);
     this.tailClear = clearLength !== undefined ? this.tailClear + clearLength : tail;
     if (template.kind === 'start' || template.kind === 'lobby' || template.kind === 'exit') this.tailClear = template.length;

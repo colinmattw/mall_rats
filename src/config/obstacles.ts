@@ -75,5 +75,5 @@ export const OBSTACLE_TYPES: Record<ObstacleTypeId, ObstacleTypeDef> = {
   standee: T({ id: 'standee', label: 'Cardboard standee', severity: 'minor', requirement: 'block', depth: 0.3, width: 1.0, y0: 0, y1: 1.95 }),
   displayRack: T({ id: 'displayRack', label: 'Clothing rack', severity: 'breakable', requirement: 'block', depth: 1.2, width: 1.6, y0: 0, y1: 1.75, stylePoints: 120 }),
   mannequin: T({ id: 'mannequin', label: 'Mannequin display', severity: 'breakable', requirement: 'block', depth: 0.8, width: 1.1, y0: 0, y1: 1.95, stylePoints: 140 }),
-  boxStack: T({ id: 'boxStack', label: 'Cardboard boxes', severity: 'breakable', requirement: 'block', depth: 1.0, width: 1.5, y0: 0, y1: 1.6, stylePoints: 100 }),
+  boxStack: T({ id: 'boxStack', label: 'Cardboard boxes', severity: 'breakable', requirement: 'block', depth: 1.0, width: 1.5, y0: 0, y1: 1.8, stylePoints: 100 }),
 };
