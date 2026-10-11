@@ -57,6 +57,8 @@ interface Node {
   bag: boolean;
   parent: Node | null;
   action: Intent | null;
+  /** Tick at which the path first reached the preferred lane (path recording only). */
+  arrive: number;
 }
 
 const KIND_INDEX: Record<string, number> = { jump: 0, ollie: 1, hop: 2, pop: 3, fall: 4 };
@@ -144,7 +146,7 @@ export function validateCourse(target: ValidationTarget, opts: ValidationOptions
     const key = keyOf(q, railIndex, bag);
     const existing = frontier.get(key);
     if (existing) existing.mask |= 1 << lane;
-    else frontier.set(key, { p: q, mask: 1 << lane, bag, parent: null, action: null });
+    else frontier.set(key, { p: q, mask: 1 << lane, bag, parent: null, action: null, arrive: q.targetLane === opts.preferLane ? 0 : Infinity });
   });
 
   let explored = 0;
@@ -169,10 +171,17 @@ export function validateCourse(target: ValidationTarget, opts: ValidationOptions
           node.bag || (!!target.bag && touchesPoint(box, target.bag.x, target.bag.s, target.bag.y, bagRadius));
         const key = keyOf(q, railIndex, bag);
         const existing = next.get(key);
+        const arrive = node.arrive !== Infinity ? node.arrive : q.targetLane === opts.preferLane ? tick + 1 : Infinity;
         if (existing) {
           existing.mask |= node.mask;
+          // Identical states have identical futures, so re-parenting keeps the path valid.
+          if (record && arrive < existing.arrive) {
+            existing.parent = node;
+            existing.action = action;
+            existing.arrive = arrive;
+          }
         } else {
-          next.set(key, { p: q, mask: node.mask, bag, parent: record ? node : null, action });
+          next.set(key, { p: q, mask: node.mask, bag, parent: record ? node : null, action, arrive });
         }
       }
     }
@@ -194,11 +203,12 @@ export function validateCourse(target: ValidationTarget, opts: ValidationOptions
       }
     }
     if (record) {
-      const score = (node.p.mode === 'ground' ? 2 : 0) + (opts.preferLane === node.p.lane ? 1 : 0) + (node.bag ? 4 : 0);
-      const bestScore = best
-        ? (best.p.mode === 'ground' ? 2 : 0) + (opts.preferLane === best.p.lane ? 1 : 0) + (best.bag ? 4 : 0)
-        : -1;
-      if (score > bestScore) best = node;
+      const scoreOf = (n: Node) =>
+        (n.bag ? 8 : 0) +
+        (opts.preferLane === n.p.targetLane ? 3 : 0) +
+        (n.p.mode === 'ground' ? 2 : 0) +
+        (n.arrive !== Infinity && opts.preferLane === n.p.targetLane ? 1 - n.arrive / (tick + 1) : 0);
+      if (!best || scoreOf(node) > scoreOf(best)) best = node;
     }
   }
 

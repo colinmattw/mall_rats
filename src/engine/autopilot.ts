@@ -1,3 +1,4 @@
+import type { EnvId } from '../config/environments';
 import { speedAtDistance } from '../config/gameplay';
 import type { Intent } from './player';
 import type { RunSimulation } from './simulation';
@@ -15,8 +16,20 @@ export class AutoPilot {
 
   constructor(
     private readonly sim: RunSimulation,
-    private readonly opts: { lookaheadSeconds?: number; replanTicks?: number; preferLane?: number } = {},
+    private readonly opts: { lookaheadSeconds?: number; replanTicks?: number; preferLane?: number; routePreference?: EnvId[] } = {},
   ) {}
+
+  /** Lane whose junction door leads to the most preferred environment (if a junction is pending). */
+  private junctionLane(): number | undefined {
+    const options = this.sim.generator.waitingJunction?.junction?.options;
+    const prefs = this.opts.routePreference;
+    if (!options || !prefs?.length) return undefined;
+    for (const env of prefs) {
+      const lane = options.indexOf(env);
+      if (lane >= 0) return lane;
+    }
+    return undefined;
+  }
 
   next(): Intent | null {
     const replanTicks = this.opts.replanTicks ?? 24;
@@ -40,7 +53,7 @@ export class AutoPilot {
         sStart: p.s,
         sEnd,
       },
-      { speed: speedFn, startStates: [p], recordPath: true, cfg: sim.cfg, preferLane: this.opts.preferLane ?? 1 },
+      { speed: speedFn, startStates: [p], recordPath: true, cfg: sim.cfg, preferLane: this.junctionLane() ?? this.opts.preferLane ?? 1 },
     );
     if (result.path && result.passableFrom[0]) {
       this.plan = result.path;
