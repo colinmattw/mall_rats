@@ -7,6 +7,11 @@ import { RarityTag, ScreenHeader } from '../components';
 import { ItemArt } from '../ItemArt';
 import { formatCash, useSave } from '../services';
 
+function formatOdds(weight: number): string {
+  const pct = Math.round(weight * 1000) / 10;
+  return `${Number.isInteger(pct) ? pct.toFixed(0) : pct.toFixed(1)}%`;
+}
+
 export function Collection() {
   const save = useSave();
   const app = useApp();
@@ -41,7 +46,7 @@ export function Collection() {
                   <td>
                     <RarityTag rarity={r} />
                   </td>
-                  <td data-testid={`odds-${r}`}>{(odds[r] * 100).toFixed(odds[r] < 0.1 ? 1 : 0)}%</td>
+                  <td data-testid={`odds-${r}`}>{formatOdds(odds[r])}</td>
                   <td>{CATALOG_ITEMS.filter((i) => i.rarity === r).length}</td>
                   <td>{formatCash(ECONOMY.sellback[r])}</td>
                 </tr>

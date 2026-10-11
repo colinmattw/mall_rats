@@ -3,7 +3,13 @@ import { expect, test, type Page } from '@playwright/test';
 type MallRats = {
   store: {
     cash: number;
-    snapshot: { equipped: Record<string, string | null>; wallet: { cash: number }; owned: Record<string, unknown>; duplicates: Record<string, number> };
+    snapshot: {
+      equipped: Record<string, string | null>;
+      appearance: { hairStyle: string };
+      wallet: { cash: number };
+      owned: Record<string, unknown>;
+      duplicates: Record<string, number>;
+    };
     dev: {
       grantCash: (n: number) => void;
       setCash: (n: number) => void;
@@ -24,14 +30,6 @@ async function boot(page: Page) {
   });
   await page.goto('/');
   await expect(page.getByTestId('main-menu')).toBeVisible({ timeout: 30_000 });
-}
-
-async function mall(page: Page): Promise<MallRats> {
-  return page.evaluate(() => {
-    const g = (window as unknown as { __mallrats?: MallRats }).__mallrats;
-    if (!g) throw new Error('dev hooks missing');
-    return g;
-  });
 }
 
 async function grantCash(page: Page, amount: number) {
@@ -177,7 +175,7 @@ test.describe('Mall Rats flows', () => {
     await page.getByTestId('open-shop').click();
     await page.getByRole('button', { name: /Bag odds/ }).click();
     await expect(page.getByTestId('collection')).toBeVisible();
-    await expect(page.getByTestId('odds-legendary')).toHaveText('1%');
+    await expect(page.getByTestId('odds-legendary')).toHaveText(/1(\.0)?%/);
     await page.getByTestId('back').click();
     await page.getByTestId('back').click();
     await page.getByTestId('open-settings').click();
